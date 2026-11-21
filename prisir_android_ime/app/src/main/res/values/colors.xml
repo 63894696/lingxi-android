@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  键盘视觉 token —— 2026-11-20 第二版：像素级对齐生图模型设计稿（design/keyboard_design.png）。
+  设计稿实测值（脚本采样）：键盘底 #F0F0EF 暖浅灰 / 字母键面 #FBFBFB 暖白 /
+  功能键 #E0E0E0 中性灰（旧版 #EBEDF1 蓝灰偏差太大）/ 字符 #202020 级深色 /
+  候选栏底 #F9F9F7 / 拼音串胶囊底 #E2E9F6（设计稿 y≈224-304 的淡蓝带）。
+  语言风格：无边框悬浮按键、大圆角、低饱和、清爽无广告（2025 输入法高评分设计共性）。
+-->
+<resources>
+    <color name="kb_bg">#FFF0F0EF</color>
+    <color name="kb_key">#FFFBFBFB</color>
+    <!-- 功能键：中性灰（设计稿实测 #E0E0E0），旧版蓝灰 #EBEDF1 与暖底冲突 -->
+    <color name="kb_key_func">#FFE0E0E0</color>
+    <!-- 字母键按压：淡蓝反馈（响应感比灰更明显） -->
+    <color name="kb_key_pressed">#FFD7DEEA</color>
+    <!-- 功能键按压：深一档中性灰 -->
+    <color name="kb_key_pressed_func">#FFCBCBCB</color>
+    <color name="kb_text">#FF232323</color>
+    <color name="kb_text_func">#FF5F6266</color>
+    <color name="kb_accent">#FF3060D8</color>
+    <color name="cand_bg">#FFF9F9F7</color>
+    <color name="kb_sep">#FFE5E2DC</color>
+    <!-- 键面下方的柔和阴影（悬浮按键立体感） -->
+    <color name="kb_shadow">#26000000</color>
+    <!-- 候选栏工具键底色（比功能键更淡，避免抢视觉） -->
+    <color name="kb_tool_bg">#FFEEEDEA</color>
+    <!-- 翻译结果条（设计稿候选高亮同款淡蓝） -->
+    <color name="kb_translate_bg">#FFE2E9F6</color>
+    <!-- 拼音串胶囊底：设计稿 y≈224-304 的淡蓝带 -->
+    <color name="kb_pinyin_capsule">#FFE2E9F6</color>
+    <!-- 音节区选中项的淡蓝底 -->
+    <color name="kb_accent_fill">#333060D8</color>
+
+    <!-- ── 设置页（design/settings_design.png 取色）────────────────────── -->
+    <color name="page_bg">#FFF5F6F8</color>
+    <color name="card_bg">#FFFFFFFF</color>
+    <color name="card_stroke">#FFE8EAEE</color>
+    <color name="text_primary">#FF1F2329</color>
+    <color name="text_secondary">#FF6B7280</color>
+    <color name="accent_pressed">#FF275BB8</color>
+    <color name="status_green">#FF189048</color>
+</resources>

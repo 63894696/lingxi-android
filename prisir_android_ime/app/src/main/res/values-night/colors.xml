@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  深色模式键盘视觉 token（跟随系统夜间模式）。
+  与 values/colors.xml 一一对应，保证 R.color.* 在夜间自动取深色值。
+  配色参考 One UI / Miuix 深色：深灰底、稍亮的键面、低对比功能键、亮字。
+-->
+<resources>
+    <color name="kb_bg">#FF1B1C1E</color>
+    <color name="kb_key">#FF2C2E33</color>
+    <color name="kb_key_func">#FF24262B</color>
+    <color name="kb_key_pressed">#FF454A54</color>
+    <color name="kb_text">#FFF2F3F5</color>
+    <color name="kb_text_func">#FF9AA0AA</color>
+    <color name="kb_accent">#FF7EA8FF</color>
+    <color name="cand_bg">#FF222327</color>
+    <color name="kb_sep">#FF33363C</color>
+    <color name="kb_shadow">#40000000</color>
+    <color name="kb_tool_bg">#FF26282E</color>
+    <color name="kb_translate_bg">#FF1E2A44</color>
+    <color name="kb_pinyin_capsule">#FF22304E</color>
+    <color name="kb_accent_fill">#337EA8FF</color>
+</resources>

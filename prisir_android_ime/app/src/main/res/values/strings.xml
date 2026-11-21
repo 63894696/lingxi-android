@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">灵犀输入法</string>
+    <string name="ime_name">灵犀拼音</string>
+    <string name="subtype_zh">中文（拼音 26 键）</string>
+    <string name="subtype_t9">中文（九宫格）</string>
+    <string name="subtype_en">English</string>
+    <string name="word_manager">词库管理</string>
+</resources>

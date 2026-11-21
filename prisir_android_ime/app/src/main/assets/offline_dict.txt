@@ -1,0 +1,388 @@
+# 灵犀输入法 · 离线短语表
+#
+# 用途：**没有网络时也能翻译常用表达**（出境、进飞机、地铁、弱网）。
+# 命中规则是**精确匹配**（去首尾空格）—— 不做逐词硬拼，拼出来的句子质量太差，
+# 宁可明确告诉用户"离线词库没有这个词"，也不给一个似是而非的译文。
+#
+# 2026-11-20 精简：只保留中英互译两个语向（zh>en + en>zh），
+# 其余语向（日/韩/法/德/西/俄/意/葡/越/泰/阿/繁）已删除。
+#
+# 格式：
+#   #! src=<源语言> tgt=<目标语言>     ← 语向节头
+#   <源词>\t<译文>                     ← 一条一条（同一节内键不能重复）
+
+#! src=zh tgt=en
+你好	hello
+您好	hello (formal)
+早上好	good morning
+早安	good morning
+下午好	good afternoon
+晚上好	good evening
+晚安	good night
+再见	goodbye
+拜拜	bye
+谢谢	thank you
+谢谢你	thank you
+多谢	thanks a lot
+非常感谢	thank you very much
+不客气	you're welcome
+没关系	it's okay
+没关系啦	never mind
+对不起	sorry
+抱歉	excuse me
+请	please
+请稍等	please wait
+请进	go ahead
+好的	okay
+好	okay
+是的	yes
+不是	no
+当然	of course
+当然可以	of course
+可能	maybe
+对的	correct
+我爱你	I love you
+我很好	I'm fine
+你好吗	how are you
+最近怎么样	how have you been
+很高兴见到你	nice to meet you
+认识你很高兴	nice to meet you
+回头见	see you later
+下次见	see you next time
+一路顺风	have a good trip
+旅途愉快	have a nice trip
+保重	take care
+照顾好自己	take care of yourself
+多保重	take care
+辛苦了	thanks for your hard work
+麻烦你了	sorry to trouble you
+帮个忙	can you help me
+请帮帮我	please help me
+不用谢	no problem
+我明白	I understand
+我不懂	I don't understand
+你说慢一点	speak slower
+请再说一遍	please say it again
+怎么走	how do I get there
+在哪里	where is it
+在哪儿	where is it
+洗手间在哪里	where is the restroom
+多少钱	how much is it
+太贵了	too expensive
+便宜一点	cheaper please
+可以便宜点吗	can you give me a discount
+我要这个	I'll take this
+不要了	no thanks
+就这个	this one
+还有别的吗	anything else
+我买这个	I'll buy this
+刷卡可以吗	can I pay by card
+可以刷卡吗	can I pay by card
+现金	cash
+收据	receipt
+发票	invoice
+菜单	menu
+我看看菜单	let me see the menu
+我要这个菜	I'd like this dish
+不要辣	not spicy
+不要香菜	no cilantro
+我要白饭	I'd like rice
+我要面	I'd like noodles
+我有点渴	I'm a bit thirsty
+我要一杯水	a glass of water please
+水	water
+我饿了	I'm hungry
+我吃饱了	I'm full
+很好吃	very delicious
+太辣了	too spicy
+再来一份	one more please
+我的名字是	my name is
+我是	I am
+我来自	I come from
+我是中国人	I'm Chinese
+我是学生	I'm a student
+我在工作	I work
+你在做什么	what are you doing
+你吃饭了吗	have you eaten
+现在几点了	what time is it
+今天	today
+明天	tomorrow
+昨天	yesterday
+早上	morning
+中午	noon
+下午	afternoon
+晚上	evening
+现在	now
+今天星期一	it's Monday today
+周末	this weekend
+星期天	Sunday
+星期一	Monday
+星期二	Tuesday
+星期三	Wednesday
+星期四	Thursday
+星期五	Friday
+星期六	Saturday
+一月	January
+二月	February
+三月	March
+四月	April
+五月	May
+六月	June
+七月	July
+八月	August
+九月	September
+十月	October
+十一月	November
+十二月	December
+今天几号	what's today's date
+一	one
+二	two
+三	three
+四	four
+五	five
+六	six
+七	seven
+八	eight
+九	nine
+十	ten
+一百	one hundred
+一千	one thousand
+第一	first
+第二	second
+最后	last
+所有	all
+一共	in total
+可以	can
+不可以	cannot
+要	want
+不要	don't want
+需要	need
+有	have
+没有	don't have
+在	is
+去	go
+来	come
+走	walk
+坐	sit
+站	stand
+吃	eat
+喝	drink
+睡	sleep
+看	see
+听	listen
+说	speak
+读	read
+写	write
+工作	work
+学习	study
+开会	have a meeting
+上班	go to work
+下班	get off work
+回家	go home
+出发	depart
+到达	arrive
+机场	airport
+火车站	train station
+地铁	subway
+公交车	bus
+出租车	taxi
+酒店	hotel
+旅馆	hotel
+房间	room
+预订	reserve
+入住	check in
+退房	check out
+钥匙	key
+护照	passport
+签证	visa
+机票	flight ticket
+车票	ticket
+左边	left
+右边	right
+前面	front
+后面	back
+旁边	beside
+上面	on top
+下面	underneath
+这里	here
+那里	there
+附近	nearby
+中国	China
+北京	Beijing
+上海	Shanghai
+日本	Japan
+韩国	South Korea
+美国	America
+英国	UK
+法国	France
+德国	Germany
+俄罗斯	Russia
+医院	hospital
+药店	pharmacy
+银行	bank
+邮局	post office
+警察	police
+餐厅	restaurant
+大	big
+小	small
+多	many
+少	few
+坏	bad
+新	new
+旧	old
+快	fast
+慢	slow
+热	hot
+冷	cold
+贵	expensive
+便宜	cheap
+容易	easy
+难	hard
+重要	important
+喜欢	like
+不喜欢	don't like
+爱	love
+想	want to
+知道	know
+不知道	don't know
+等一下	wait a moment
+小心	be careful
+等等	wait
+快点	hurry up
+借我	lend me
+我要走了	I'm leaving
+我到了	I'm here
+等我一下	wait for me
+打个电话	make a call
+发消息	send a message
+照片	photo
+视频	video
+音乐	music
+电影	movie
+天气	weather
+下雨了	it's raining
+出太阳了	the sun is out
+很热	very hot
+很冷	very cold
+我需要帮助	I need help
+请帮我叫出租车	please call me a taxi
+有人在吗	is anyone there
+
+#! src=en tgt=zh
+hello	你好
+hi	你好
+thank you	谢谢
+thanks	谢谢
+sorry	对不起
+excuse me	打扰一下
+goodbye	再见
+bye	拜拜
+good morning	早上好
+good night	晚安
+how are you	你好吗
+nice to meet you	很高兴认识你
+I love you	我爱你
+yes	是的
+no	不是
+okay	好的
+please	请
+welcome	欢迎
+how much	多少钱
+where is it	在哪里
+help	救命
+I need help	我需要帮助
+water	水
+food	食物
+see you later	回头见
+I don't understand	我不明白
+speak slower	请说慢一点
+good evening	晚上好
+good afternoon	下午好
+good night	晚安
+you're welcome	不客气
+never mind	没关系
+please wait	请稍等
+wait a moment	等一下
+too expensive	太贵了
+cheaper please	便宜一点
+I'll take this	我要这个
+no thanks	不要了
+yes please	好的 谢谢
+of course	当然
+maybe	可能
+correct	对的
+I'm fine	我很好
+how have you been	最近怎么样
+nice to meet you	很高兴认识你
+see you next time	下次见
+take care	保重
+I understand	我明白
+speak slower	请说慢一点
+say it again	请再说一遍
+how do I get there	怎么走
+where is the restroom	洗手间在哪里
+restroom	洗手间
+how much is it	多少钱
+can I pay by card	可以刷卡吗
+cash	现金
+receipt	收据
+invoice	发票
+menu	菜单
+not spicy	不要辣
+I'm hungry	我饿了
+I'm full	我吃饱了
+delicious	很好吃
+thirsty	渴了
+a glass of water	一杯水
+water	水
+coffee	咖啡
+tea	茶
+what time is it	现在几点
+today	今天
+tomorrow	明天
+yesterday	昨天
+morning	早上
+afternoon	下午
+evening	晚上
+now	现在
+airport	机场
+train station	火车站
+subway	地铁
+bus	公交车
+taxi	出租车
+hotel	酒店
+room	房间
+check in	入住
+check out	退房
+passport	护照
+visa	签证
+ticket	票
+left	左边
+right	右边
+nearby	附近
+hospital	医院
+pharmacy	药店
+bank	银行
+post office	邮局
+police	警察
+restaurant	餐厅
+big	大
+small	小
+cheap	便宜
+expensive	贵
+I need help	我需要帮助
+help	救命
+is anyone there	有人在吗
+call a taxi	叫出租车
+make a call	打个电话
+send a message	发消息
+photo	照片
+weather	天气
+it's raining	下雨了
+very hot	很热
+very cold	很冷
+I'm leaving	我要走了
+I'm here	我到了
+wait for me	等我一下
+be careful	小心
+hurry up	快点

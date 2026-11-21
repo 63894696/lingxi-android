@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- 云端翻译（候选栏「译」键 + 状态页翻译面板）；普通权限，装机即授予 -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+
+    <application
+        android:allowBackup="false"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:supportsRtl="false"
+        android:theme="@style/AppTheme">
+
+        <!-- 输入法服务：系统只允许持有 BIND_INPUT_METHOD 的进程绑定 -->
+        <service
+            android:name=".PrisirImeService"
+            android:exported="true"
+            android:label="@string/ime_name"
+            android:configChanges="uiMode|orientation|screenSize|keyboardHidden"
+            android:permission="android.permission.BIND_INPUT_METHOD">
+            <intent-filter>
+                <action android:name="android.view.InputMethod" />
+            </intent-filter>
+            <meta-data
+                android:name="android.view.im"
+                android:resource="@xml/method" />
+        </service>
+
+        <activity
+            android:name=".WordActivity"
+            android:exported="false"
+            android:label="@string/word_manager" />
+
+        <!-- 极简设置页：只显示词库状态（不做任何"需要用户配置才能用"的开关） -->
+        <activity
+            android:name=".AboutActivity"
+            android:exported="true"
+            android:label="@string/ime_name">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+    </application>
+</manifest>

@@ -1,0 +1,43 @@
+# Build / IDE
+**/target/
+**/build/
+**/.gradle/
+**/.idea/
+**/.vscode/
+**/*.iml
+**/local.properties
+**/.cxx/
+**/captures/
+**/*.apk
+**/*.aab
+**/*.ap_
+**/*.dex
+**/*.class
+**/jniLibs/**/*.so
+
+# Lexicon / models (too large for git; ship in releases)
+**/*.db
+**/*.db-journal
+**/*.db-wal
+**/*.db-shm
+**/*.midx
+**/*.idx
+**/*.onnx
+**/sensevoice-small/
+
+# Dist artifacts
+/dist/
+*.apk
+*.log
+
+# OS / editor
+Thumbs.db
+Desktop.ini
+.DS_Store
+*~
+*.swp
+*.swo
+__pycache__/
+*.pyc
+.venv/
+_venv*/
