@@ -31,7 +31,7 @@ class KeyboardView @JvmOverloads constructor(
 ) : View(context, attrs) {
 
     /** 候选栏工具键。 */
-    enum class ToolAction { TOGGLE_TRADITIONAL, TRANSLATE, OPEN_LANG_PICKER }
+    enum class ToolAction { TOGGLE_TRADITIONAL, LOOKUP, TRANSLATE, OPEN_LANG_PICKER }
 
     interface Listener {
         fun onKey(key: KeySpec)
@@ -41,14 +41,14 @@ class KeyboardView @JvmOverloads constructor(
         /** 翻译结果上屏（不走学习通道）。 */
         fun onTranslation(text: String)
 
-        /** 工具键（繁/译/语言面板）。 */
+        /** 工具键（繁/查/译/语言面板）。 */
         fun onTool(action: ToolAction)
 
         /** 九宫格：用户选了某个读音（用来消歧、把候选收敛过去）。 */
         fun onReading(reading: String)
 
-        /** 长按候选词：翻译这个词（而不是只翻译首选）。 */
-        fun onTranslateWord(word: String)
+        /** 长按候选词：查词典释义（翻译请点「译」）。 */
+        fun onLookupWord(word: String)
 
         /** 语言面板里选了目标语言。 */
         fun onSelectLang(code: String)
@@ -463,18 +463,21 @@ class KeyboardView @JvmOverloads constructor(
 
     // ── 候选栏第一行：拼音 + 工具键 ────────────────────────────────────────
 
-    /** 工具键视觉宽度：小屏（<360dp）收窄一档，但不低于 54dp。 */
-    private fun toolW() = if (width < d(360f)) d(54f) else d(60f)
+    /** 工具键个数：简/繁 · 查 · 译。 */
+    private val toolCount = 3
 
-    /** 两个工具键占的总宽（含中间 6dp 间隙）。 */
-    private fun toolAreaWidth() = toolW() * 2 + d(6f)
+    /** 工具键视觉宽度：三键时略收窄，小屏不低于 46dp。 */
+    private fun toolW() = if (width < d(360f)) d(46f) else d(52f)
 
-    /** 工具键的**视觉**矩形（第一行右侧，垂直居中）。 */
+    /** 三个工具键占的总宽（含间隙）。 */
+    private fun toolAreaWidth() = toolW() * toolCount + d(6f) * (toolCount - 1)
+
+    /** 工具键的**视觉**矩形（第一行右侧，垂直居中；index 0=最左）。 */
     private fun toolRect(index: Int): RectF {
         val w = toolW()
         val gap = d(6f)
         val right = width - d(8f)
-        val left = right - w * (2 - index) - gap * index
+        val left = right - w * (toolCount - index) - gap * (toolCount - 1 - index)
         val h = d(34f)
         return RectF(left, (pyH - h) / 2f, left + w, (pyH + h) / 2f)
     }
@@ -549,9 +552,10 @@ class KeyboardView @JvmOverloads constructor(
             canvas.drawText(statusLine, right, cy, statusPaint)
         }
 
-        // 简繁键：「简」态不高亮，「繁」态高亮；「译·XX」把目标语言写在按钮上
+        // 简/繁 · 查 · 译·XX（长按「译」开语言面板；长按候选 = 查释义）
         drawTool(canvas, toolRect(0), traditionalState, traditionalState == "繁", "tool:trad", toolPaint, toolHiPaint)
-        drawTool(canvas, toolRect(1), "译·" + translateLangLabel, false, "tool:trans", toolLangPaint, toolLangHiPaint)
+        drawTool(canvas, toolRect(1), "查", false, "tool:lookup", toolPaint, toolHiPaint)
+        drawTool(canvas, toolRect(2), "译·" + translateLangLabel, false, "tool:trans", toolLangPaint, toolLangHiPaint)
     }
 
     private fun drawTool(
@@ -754,7 +758,8 @@ class KeyboardView @JvmOverloads constructor(
 
         // 候选栏工具键（第一行右侧）：命中区比视觉大一圈，手指好按
         out.add(Hit(toolHitRect(0), tool = ToolAction.TOGGLE_TRADITIONAL, id = "tool:trad"))
-        out.add(Hit(toolHitRect(1), tool = ToolAction.TRANSLATE, id = "tool:trans"))
+        out.add(Hit(toolHitRect(1), tool = ToolAction.LOOKUP, id = "tool:lookup"))
+        out.add(Hit(toolHitRect(2), tool = ToolAction.TRANSLATE, id = "tool:trans"))
 
         // 音节/拼音候选区（九宫格消歧）：命中区上下各外扩 2dp
         for ((s, r) in layoutReadings()) {
@@ -891,7 +896,7 @@ class KeyboardView @JvmOverloads constructor(
                 if (hit.key?.type == KeyType.DELETE) {
                     handler.postDelayed({ startRepeatDelete() }, 350)
                 }
-                // 「译」长按 = 打开语言面板；长按候选 = 翻译这个词
+                // 「译」长按 = 打开语言面板；长按候选 = 查词典释义
                 when {
                     hit.tool == ToolAction.TRANSLATE -> {
                         longPressTool = Runnable {
@@ -903,7 +908,7 @@ class KeyboardView @JvmOverloads constructor(
                     hit.candidate != null && !hit.isTranslation -> {
                         longPressTool = Runnable {
                             longPressToolFired = true
-                            listener?.onTranslateWord(hit.candidate!!)
+                            listener?.onLookupWord(hit.candidate!!)
                         }
                         handler.postDelayed(longPressTool!!, 450)
                     }

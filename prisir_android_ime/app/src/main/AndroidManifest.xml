@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <!-- 云端翻译（候选栏「译」键 + 状态页翻译面板）；普通权限，装机即授予 -->
+    <!-- 主动「译/查」才联网（翻译竞速端点 + 公开词典 API）；普通权限，装机即授予 -->
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
