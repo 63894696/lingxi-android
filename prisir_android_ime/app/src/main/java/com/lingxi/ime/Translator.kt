@@ -23,9 +23,9 @@ import java.util.concurrent.atomic.AtomicBoolean
  * 1. **缓存**（内存 LRU + 落盘）：翻译过的东西第二次 0 延迟；断网/出境也能用。
  *    （用户常翻的是**重复的词**，这条的实际命中率最高）
  * 2. **离线短语表**（assets）：常用表达**完全离线**可译，不依赖任何网络。
- * 3. **多端点并行竞速**：Google gtx / MyMemory / 两个 LibreTranslate 公共实例**同时**打，
- *    **谁先成功用谁** —— 国内自动落到 MyMemory，出境自动落到 Google，
- *    不需要"先探测哪个能用"（探测本身就是一次等待）。
+ * 3. **多端点并行竞速**：Google gtx / Mozhi（Google 前端代理）/ MyMemory **同时**打，
+ *    **谁先成功用谁** —— Google 与 Mozhi 视为优质端（互相抢先即可挡住 MyMemory 脏 TM），
+ *    MyMemory 仅作兜底。不需要"先探测哪个能用"。
  *
  * ## 为什么是"并行竞速"而不是"顺序 fallback"
  * 顺序 fallback 的延迟是"前面几个端点依次超时"**之和**（国内 Google 不通 = 先白等 3~6 秒，
@@ -35,8 +35,8 @@ import java.util.concurrent.atomic.AtomicBoolean
  * | 端点 | 免 key | 国内可用 | 出境可用 | 备注 |
  * |---|---|---|---|---|
  * | Google gtx | ✓ | ✗（常被墙/不稳） | ✓ | 质量最好 |
- * | MyMemory | ✓ | ✓ | ✓ | 有每日字符配额，超额会报错（已识别为失败） |
- * | LibreTranslate 公共实例 | ✓ | 部分 | ✓ | 限流/常挂，但竞速下无害 |
+ * | Mozhi (engine=google) | ✓ | 视实例 | ✓ | 公共前端代理 Google；替代已失效的 Libre 公共实例 |
+ * | MyMemory | ✓ | ✓ | ✓ | 有每日配额；简中偶发脏 TM，作兜底 |
  */
 object Translator {
 
@@ -62,10 +62,16 @@ object Translator {
     private const val PREF_CACHE = "lingxi_tr_cache"
     private const val OFFLINE_ASSET = "offline_dict.txt"
 
-    /** LibreTranslate 公共实例（第三梯队；限流/常挂，但竞速下无害）。 */
-    private val LIBRE_INSTANCES = listOf(
-        "https://translate.astian.org/translate",
-        "https://trans.zillyhuhn.com/translate",
+    /**
+     * Mozhi 公共实例（Google 引擎前端，免 key）。
+     * 2026-11 实测：旧 LibreTranslate 公共实例（astian / zillyhuhn）已 DNS/证书失效；
+     * Lingva 多数实例 403/超时；`mozhi.pussthecat.org` 对 en→zh-CN/zh-TW 可用且质量对齐 Google。
+     * 多实例轮询：单个社区实例会挂，竞速下无害。
+     */
+    private val MOZHI_INSTANCES = listOf(
+        "https://mozhi.pussthecat.org",
+        "https://mozhi.ducks.party",
+        "https://mozhi.adminforge.de",
     )
 
     /** 翻译结果。 */
@@ -201,11 +207,12 @@ object Translator {
             }
         }
 
-        val jobs = listOf<Triple<Boolean, String, () -> String?>>(
+        // preferred=true：Google 质量档（含 Mozhi 代理）。任一先到即挡住 MyMemory 脏结果。
+        val jobs = listOf(
             Triple(true, "google", { google(text, target) }),
+            Triple(true, "mozhi-1", { mozhi(text, src, target, MOZHI_INSTANCES[0]) }),
+            Triple(true, "mozhi-2", { mozhi(text, src, target, MOZHI_INSTANCES[1]) }),
             Triple(false, "mymemory", { mymemory(text, src, target) }),
-            Triple(false, "libre-1", { libre(text, target, LIBRE_INSTANCES[0]) }),
-            Triple(false, "libre-2", { libre(text, target, LIBRE_INSTANCES[1]) }),
         )
         for ((isGoogle, epName, job) in jobs) {
             Thread {
@@ -271,24 +278,32 @@ object Translator {
         return decodeEntities(t)
     }
 
-    /** LibreTranslate 公共实例（免 key；第三梯队）。 */
-    private fun libre(text: String, target: String, base: String): String? {
-        val body = JSONObject()
-            .put("q", text)
-            .put("source", "auto")
-            .put("target", target)
-            .put("format", "text")
-            .toString()
-        val resp = post(base, body) ?: return null
-        val obj = JSONObject(resp)
-        val t = obj.optString("translatedText")
+    /**
+     * Mozhi：社区前端代理，`engine=google` 时质量接近 Google gtx。
+     * API：GET `{base}/api/translate?engine=google&from=&to=&text=`
+     * 注意：源语言不能传裸 `zh`（会 500），需映射为 `zh-CN`。
+     */
+    private fun mozhi(text: String, src: String, target: String, base: String): String? {
+        val from = mozhiLang(src)
+        val to = mozhiLang(target)
+        val url = base.trimEnd('/') + "/api/translate?engine=google" +
+            "&from=" + URLEncoder.encode(from, "UTF-8") +
+            "&to=" + URLEncoder.encode(to, "UTF-8") +
+            "&text=" + URLEncoder.encode(text, "UTF-8")
+        val body = get(url) ?: return null
+        val obj = JSONObject(body)
+        val t = obj.optString("translated-text")
         if (t.isBlank()) return null
         return decodeEntities(t)
     }
 
-    private fun get(url: String): String? = request(url, null)
+    /** Mozhi 语码：应用内 `zh` → `zh-CN`；其余与 Google tl 一致（含 zh-CN / zh-TW）。 */
+    private fun mozhiLang(code: String): String = when (code) {
+        "zh" -> "zh-CN"
+        else -> code
+    }
 
-    private fun post(url: String, body: String): String? = request(url, body)
+    private fun get(url: String): String? = request(url, null)
 
     private fun request(url: String, body: String?): String? {
         var conn: HttpURLConnection? = null
