@@ -100,8 +100,6 @@ class PrisirImeService : InputMethodService(), KeyboardView.Listener {
      * 每次发起翻译和每次按键都递增它，回调时对不上就丢弃结果。
      */
     private var translateSeq = 0
-    /** 词典查询序号：作废过期结果（同 translateSeq）。 */
-    private var lookupSeq = 0
     /** 收到过的按键总数（"快速按键自检"用它数"到底收进去几个键"）。 */
     private var keyPressCount: Int = 0
 
@@ -132,13 +130,9 @@ class PrisirImeService : InputMethodService(), KeyboardView.Listener {
             android.util.Log.w("LingxiE", "词库落位: ${t.message}")
         }
         Engine.load(DbLocator.resolve(this).absolutePath)
-        // 翻译器 / 词典初始化：离线短语表 + 缓存（幂等；不阻塞启动）。
+        // 翻译器初始化：加载离线短语表 + 翻译缓存（幂等；不阻塞启动）。
         try {
             Translator.init(this)
-        } catch (t: Throwable) {
-        }
-        try {
-            Dictionary.init(this)
         } catch (t: Throwable) {
         }
         // 词库"预热"：刚打开时数据库页还没进页缓存，第一次查询要几百毫秒（实测 451ms），
@@ -382,7 +376,6 @@ class PrisirImeService : InputMethodService(), KeyboardView.Listener {
         keyPressCount++
         // 新输入 → 作废在途的翻译请求（那份译文对应的是上一串拼音，显示出来就是错的）
         translateSeq++
-        lookupSeq++
         syncLayout()
         val ic = currentInputConnection ?: return
         val t9 = mode == LayoutPref.PY9
@@ -583,8 +576,6 @@ class PrisirImeService : InputMethodService(), KeyboardView.Listener {
                 refresh()
             }
 
-            KeyboardView.ToolAction.LOOKUP -> doLookup()
-
             KeyboardView.ToolAction.TRANSLATE -> doTranslate()
 
             KeyboardView.ToolAction.OPEN_LANG_PICKER -> {
@@ -607,9 +598,9 @@ class PrisirImeService : InputMethodService(), KeyboardView.Listener {
         refresh()
     }
 
-    /** 长按候选词：查词典释义（翻译请点「译」）。 */
-    override fun onLookupWord(word: String) {
-        doLookup(word)
+    /** 长按候选词：翻译这个词（而不是只能翻译首选）。 */
+    override fun onTranslateWord(word: String) {
+        doTranslate(word)
     }
 
     /** 语言面板里选了目标语言。 */
@@ -620,61 +611,6 @@ class PrisirImeService : InputMethodService(), KeyboardView.Listener {
         v.translateLangLabel = LayoutPref.shortLang(code)
         v.invalidate()
         doTranslate()
-    }
-
-    /**
-     * 查词典：优先显式词（长按候选）→ 选区 → 首选候选 / composing。
-     * 不做全文查询（整句请用「译」）。结果只进状态行，不上屏。
-     */
-    private fun doLookup(source: String? = null) {
-        val v = keyboard ?: return
-        val ic = currentInputConnection
-        var src = source?.trim().orEmpty()
-        if (src.isEmpty() && ic != null) {
-            try {
-                src = ic.getSelectedText(0)?.toString()?.trim().orEmpty()
-            } catch (t: Throwable) {
-            }
-        }
-        if (src.isEmpty()) {
-            src = v.candidates.firstOrNull() ?: composing
-        }
-        if (src.isEmpty()) {
-            v.statusLine = "先选词或打出候选再查"
-            v.invalidate()
-            return
-        }
-        // 英文模式下 composing 可能是整词；中文 composing 是拼音则优先用候选
-        if (src == composing && v.candidates.isNotEmpty() &&
-            src.all { it.code < 128 && (it.isLetter() || it == '\'') }
-        ) {
-            // 拼音串本身几乎查不到释义，改用首选候选汉字/词
-            if (src.any { it in 'a'..'z' || it in 'A'..'Z' } &&
-                !src.any { it.code in 0x4E00..0x9FFF }
-            ) {
-                // 若用户在英文页，composing 就是英文词，保留；若是拼音则换候选
-                if (mode != LayoutPref.EN26 && !english) {
-                    src = v.candidates.first()
-                }
-            }
-        }
-        val seq = ++lookupSeq
-        v.statusLine = "查询中…"
-        v.invalidate()
-        Dictionary.lookup(src) { res ->
-            val k = keyboard ?: return@lookup
-            if (seq != lookupSeq) return@lookup
-            val shortSrc = if (src.length > 10) src.take(10) + "…" else src
-            when (res) {
-                is Dictionary.Outcome.Ok -> {
-                    k.statusLine = "$shortSrc · ${res.summary}"
-                }
-                is Dictionary.Outcome.Err -> {
-                    k.statusLine = "查词：" + res.reason
-                }
-            }
-            k.invalidate()
-        }
     }
 
     /**

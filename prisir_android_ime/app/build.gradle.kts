@@ -11,8 +11,8 @@ android {
         applicationId = "com.lingxi.ime"
         minSdk = 24
         targetSdk = 34
-        versionCode = 11
-        versionName = "2.0.0-alpha.11"
+        versionCode = 10
+        versionName = "2.0.0-alpha.10"
         ndk { abiFilters += listOf("arm64-v8a") }
     }
 
