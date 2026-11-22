@@ -6,9 +6,10 @@ package com.lingxi.ime
  * 几何与底行比例仍参考搜狗 20.20（`py_26.ini` / `py_9`）；键位编排参考
  * 青简 / 墨奇 / 百度常见形态：
  *   · 26 键底行：`123 / 符 / ， / 中英 / 空格 / 。 / 回车`，布局切换键标「九」
- *   · 字母第一排右上角标 1–0（主流「上滑出数字」的视觉约定；本版仅显示角标）
  *   · 九宫：3×3 + 右侧功能列，底行含 `0`，字母组 abc/def… 大字、数字小字
  *   · 数字页：拨号盘 3×4（非横排 1–0），与九键视觉对齐、切换不跳
+ *   · 符号页 1：英文半角（Gboard ?123）+ 常用 `、` `…`，保证 `http://` 可直接输入
+ *   · 符号页 2：中文书名号/引号 + 数学/货币杂项（无 SYM1 成对全角）
  *
  * 候选栏分区不在这里，由 [KeyboardView] 负责。
  */
@@ -28,11 +29,7 @@ data class KeySpec(
     val weight: Float = 1f,
     /** 实际提交的字符（CHAR 用；空则用 label） */
     val code: String = "",
-    /**
-     * 副标：
-     *   · 九宫格 = 第二行字母组（abc / def …）
-     *   · 26 键字母 = 右上角数字角标（1–0）
-     */
+    /** 副标：九宫格第二行字母组（ABC / DEF …）；26 键不用。 */
     val sub: String = "",
 )
 
@@ -43,11 +40,7 @@ object KeyboardLayout {
 
     /** 26 键拼音页：QWERTY + 主流中文底行（含，。与「九」切换）。 */
     val letters: List<List<KeySpec>> = listOf(
-        listOf(
-            ch("q", sub = "1"), ch("w", sub = "2"), ch("e", sub = "3"), ch("r", sub = "4"),
-            ch("t", sub = "5"), ch("y", sub = "6"), ch("u", sub = "7"), ch("i", sub = "8"),
-            ch("o", sub = "9"), ch("p", sub = "0"),
-        ),
+        listOf("q", "w", "e", "r", "t", "y", "u", "i", "o", "p").map { ch(it) },
         listOf("a", "s", "d", "f", "g", "h", "j", "k", "l").map { ch(it) },
         listOf(
             KeySpec("⇧", KeyType.SHIFT, 1.5f),
@@ -69,11 +62,7 @@ object KeyboardLayout {
 
     /** 英文 26 键：底行用半角标点，无九宫切换。 */
     val lettersEn: List<List<KeySpec>> = listOf(
-        listOf(
-            ch("q", sub = "1"), ch("w", sub = "2"), ch("e", sub = "3"), ch("r", sub = "4"),
-            ch("t", sub = "5"), ch("y", sub = "6"), ch("u", sub = "7"), ch("i", sub = "8"),
-            ch("o", sub = "9"), ch("p", sub = "0"),
-        ),
+        listOf("q", "w", "e", "r", "t", "y", "u", "i", "o", "p").map { ch(it) },
         listOf("a", "s", "d", "f", "g", "h", "j", "k", "l").map { ch(it) },
         listOf(
             KeySpec("⇧", KeyType.SHIFT, 1.5f),
@@ -117,12 +106,20 @@ object KeyboardLayout {
         ),
     )
 
-    /** 符号页 1：中文标点。 */
+    /**
+     * 符号页 1：英文半角（对齐 Gboard ?123 符号区）。
+     *
+     * 必须能直接打出 URL / 路径 / 代码常用符：`/` `:` `.` `@` 等。
+     * 中文全角标点挪到 SYM2「更多」。
+     */
     val sym1: List<List<KeySpec>> = listOf(
-        listOf("，", "。", "、", "；", "：", "？", "！", "…", "—", "～").map { ch(it) },
-        listOf("“", "”", "‘", "’", "（", "）", "《", "》", "【", "】").map { ch(it) },
+        // Gboard 第一屏符号行：@#$%&-+()/
+        listOf("@", "#", "$", "%", "&", "-", "+", "(", ")", "/").map { ch(it) },
+        listOf("*", "\"", "'", ":", ";", "!", "?", "\\", "_").map { ch(it) },
+        // `,` `.`/`。` 在字母底行/数字页已有；本页放更常用的顿号、省略号。
         listOf(
-            ch("·"), ch("￥"), ch("%"), ch("@"), ch("#"), ch("&"), ch("*"),
+            ch("、"), ch("…"), ch("~"), ch("`"), ch("|"), ch("^"), ch("="),
+            ch("<"), ch(">"),
             KeySpec("⌫", KeyType.DELETE, 1.5f),
         ),
         listOf(
@@ -134,12 +131,19 @@ object KeyboardLayout {
         ),
     )
 
-    /** 符号页 2：数学/箭头/货币等。 */
+    /**
+     * 符号页 2：中文独有标点 + Gboard 二屏杂项（无 SYM1 半角成对重复）。
+     *
+     * 已去掉与 SYM1 成对的全角：，。；：？！（）～—“”‘’
+     * `、` `…` 已上移 SYM1；此处补不常用符 ※ ✓。
+     */
     val sym2: List<List<KeySpec>> = listOf(
-        listOf("←", "↑", "→", "↓", "√", "π", "∞", "°", "℃", "℉").map { ch(it) },
-        listOf("≈", "≠", "≤", "≥", "±", "∓", "∑", "∏", "∫", "∂").map { ch(it) },
+        // 中文独有书名号/引号 + 不常用补位
+        listOf("※", "✓", "《", "》", "【", "】", "「", "」", "『", "』").map { ch(it) },
+        // Gboard 二屏：括号 + 数学/项目符
+        listOf("[", "]", "{", "}", "°", "•", "√", "π", "÷", "×").map { ch(it) },
         listOf(
-            ch("€"), ch("£"), ch("¢"), ch("¤"), ch("©"), ch("®"), ch("™"),
+            ch("·"), ch("￥"), ch("€"), ch("£"), ch("±"), ch("≠"), ch("≈"), ch("∞"), ch("©"),
             KeySpec("⌫", KeyType.DELETE, 1.5f),
         ),
         listOf(
@@ -152,35 +156,36 @@ object KeyboardLayout {
     )
 
     /**
-     * 九宫格（T9）：对齐搜狗 py_9 + 主流软键盘补 `0`。
+     * 九宫格（T9）：对齐搜狗「拼音九键显示分词」。
      *
      * ```
-     *  1'   2abc  3def   ⌫
-     *  4ghi 5jkl  6mno   符
-     *  7pqrs 8tuv 9wxyz  回车
-     *  123  中/英  26    0    空格
+     *  分词  ABC  DEF   ⌫
+     *  GHI   JKL  MNO   符
+     *  PQRS  TUV  WXYZ  回车
+     *  123  中/英  26   0   空格
      * ```
      *
-     * 1 键提交分词符 `'`（拼音音节分隔）；2–9 提交数字串给 T9 引擎。
+     * · 分词键写入 `'`，强制音节边界（xi'an → 西安，而非 xian → 先）
+     * · 2–9 只显示字母组（数字标无上屏能力，已去掉）；code 仍为数字进引擎
+     * · `0` 仍直出数字；其它数字走「123」页
      */
     val t9: List<List<KeySpec>> = listOf(
         listOf(
-            // 1 键短按直出数字（T9 词表只有 2–9）；分词靠引擎/空格，不占 1
-            KeySpec("1", KeyType.CHAR, 1f, "1", ""),
-            KeySpec("2", KeyType.CHAR, 1f, "2", "ABC"),
-            KeySpec("3", KeyType.CHAR, 1f, "3", "DEF"),
+            KeySpec("分词", KeyType.CHAR, 1f, "'", ""),
+            KeySpec("ABC", KeyType.CHAR, 1f, "2", "ABC"),
+            KeySpec("DEF", KeyType.CHAR, 1f, "3", "DEF"),
             KeySpec("⌫", KeyType.DELETE, 1f),
         ),
         listOf(
-            KeySpec("4", KeyType.CHAR, 1f, "4", "GHI"),
-            KeySpec("5", KeyType.CHAR, 1f, "5", "JKL"),
-            KeySpec("6", KeyType.CHAR, 1f, "6", "MNO"),
+            KeySpec("GHI", KeyType.CHAR, 1f, "4", "GHI"),
+            KeySpec("JKL", KeyType.CHAR, 1f, "5", "JKL"),
+            KeySpec("MNO", KeyType.CHAR, 1f, "6", "MNO"),
             KeySpec("符", KeyType.PAGE_SYM1, 1f),
         ),
         listOf(
-            KeySpec("7", KeyType.CHAR, 1f, "7", "PQRS"),
-            KeySpec("8", KeyType.CHAR, 1f, "8", "TUV"),
-            KeySpec("9", KeyType.CHAR, 1f, "9", "WXYZ"),
+            KeySpec("PQRS", KeyType.CHAR, 1f, "7", "PQRS"),
+            KeySpec("TUV", KeyType.CHAR, 1f, "8", "TUV"),
+            KeySpec("WXYZ", KeyType.CHAR, 1f, "9", "WXYZ"),
             KeySpec("回车", KeyType.ENTER, 1f),
         ),
         listOf(

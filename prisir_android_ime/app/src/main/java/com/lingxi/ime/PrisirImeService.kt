@@ -382,19 +382,30 @@ class PrisirImeService : InputMethodService(), KeyboardView.Listener {
         when (key.type) {
             KeyType.CHAR -> {
                 val ch = key.code.ifEmpty { key.label.lowercase() }
-                val isDigit = t9 && ch.length == 1 && ch[0] in '0'..'9'
+                // 仅九宫格主页 2–9 进 T9 缓冲；数字页 0–9 一律直出（与底行 0 一致）
+                val onT9Keys = t9 && keyboard?.page == Page.T9
+                val isT9Digit = onT9Keys && ch.length == 1 && ch[0] in '2'..'9'
                 val isLetter = ch.length == 1 && ch[0] in 'a'..'z'
                 when {
-                    isDigit -> {
-                        if (ch == "1" || ch == "0") {
-                            // 九宫格「1」「0」不进 T9 缓冲（词表只有 2–9），短按直出数字
-                            ic.commitText(ch, 1)
-                        } else {
-                            composing += ch
-                            t9Reading = ""      // 新输入 → 之前的音节选择作废
+                    // 搜狗式分词：写入 `'`，强制音节边界（xi'an → 西安）
+                    t9 && ch == "'" -> {
+                        if (composing.isNotEmpty() && !composing.endsWith("'")) {
+                            composing += "'"
+                            t9Reading = ""
                             t9Readings = emptyList()
                             refresh()
                         }
+                    }
+                    isT9Digit -> {
+                        composing += ch
+                        t9Reading = ""      // 新输入 → 之前的音节选择作废
+                        t9Readings = emptyList()
+                        refresh()
+                    }
+                    // 数字页 / 九宫格底行「0」等：数字直出上屏
+                    ch.length == 1 && ch[0] in '0'..'9' -> {
+                        if (composing.isNotEmpty()) commitTop()
+                        ic.commitText(ch, 1)
                     }
                     english -> {
                         val out = if (shift && isLetter) ch.uppercase() else ch
@@ -409,9 +420,9 @@ class PrisirImeService : InputMethodService(), KeyboardView.Listener {
                         refresh()
                     }
                     else -> {
-                        // 符号页直接上屏（中文模式下标点转全角）
-                        val out = if (!english) KeyboardLayout.cnPunct[ch] ?: ch else ch
-                        ic.commitText(out, 1)
+                        // 符号/数字页按键面原样上屏（半角 `/` `:` 等不能被转成全角，否则 URL 打不出）。
+                        // 中文全角只走底行 COMMA/PERIOD，以及 SYM2 上已是全角字形的键。
+                        ic.commitText(ch, 1)
                     }
                 }
             }
@@ -515,8 +526,8 @@ class PrisirImeService : InputMethodService(), KeyboardView.Listener {
             // 原来的写法是 t9Reading 为空就**根本不学习** → 学成词在九宫格里永远不置顶
             // （2026-11-19 真机实测发现：选词上屏了，下次查询里却没有这个词）。
             // 词库读音是确定的、不依赖用户点了哪条读音，正好当 key。
-            val rd = Engine.pinyinOf(orig)?.replace(" ", "")?.takeIf { it.isNotEmpty() }
-                ?: t9Reading.replace(" ", "")
+            val rd = Engine.pinyinOf(orig)?.replace(" ", "")?.replace("'", "")?.takeIf { it.isNotEmpty() }
+                ?: t9Reading.filter { it.isLetter() }
             if (rd.isNotEmpty()) {
                 Engine.learn(rd, orig)
             }
@@ -750,7 +761,8 @@ class PrisirImeService : InputMethodService(), KeyboardView.Listener {
             // 所以主线程直接算 —— 首行马上显示拼音（"ni"）+ 读音消歧条，
             // 候选继续在后台查。手感和 26 键一样即时（以前这里空等几十~上百毫秒，
             // 用户看着像"按键没反应"）。
-            val digits = composing.filter { it.isDigit() }
+            // 保留分词符 `'`，引擎按断点展开（94'26 → xi'an）
+            val digits = composing.filter { it.isDigit() || it == '\'' }
             val rd = Engine.t9Readings(digits)
             t9Readings = rd
             v.readings = rd
@@ -778,8 +790,8 @@ class PrisirImeService : InputMethodService(), KeyboardView.Listener {
             // 连打时前面的查询已经过期 → 直接跳过，别白跑（否则越打越慢）
             if (seq != querySeq) return@execute
             if (t9) {
-                // 九宫格：数字串 → (可能读音, 候选)。选定读音后只取那个读音的候选。
-                val digits = input.filter { it.isDigit() }
+                // 九宫格：数字串（可含分词 `'`）→ (可能读音, 候选)
+                val digits = input.filter { it.isDigit() || it == '\'' }
                 val r = if (reading.isEmpty()) {
                     synchronized(t9Cache) { t9Cache[digits] } ?: run {
                         val q = Engine.t9Query(digits)

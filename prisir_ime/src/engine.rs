@@ -531,8 +531,8 @@ impl ImeEngine {
 
     /// 九宫格：用户**选定某个读音**后的候选（该读音的精确词 + 以它开头的更长词）。
     pub fn query_reading_candidates(&self, reading: &str) -> Vec<Candidate> {
-        // 读音里的空格只是给人看的，词库 key 不带空格
-        let key: String = reading.chars().filter(|c| !c.is_whitespace()).collect();
+        // 读音里的空格/分词符只是给人看的，词库 key 只要字母
+        let key: String = reading.chars().filter(|c| c.is_ascii_alphabetic()).collect();
         let (e, p) = self.query_reading(&key);
         let mut out = e;
         out.extend(p);
@@ -624,8 +624,8 @@ impl ImeEngine {
         let mut uniq: Vec<(String, String)> = Vec::new();
         let mut seen_key: HashMap<String, usize> = HashMap::new();
         for p in self.syll.t9_expand(digits) {
-            // 词库 key 不带空格："ni hao" → "nihao"
-            let key: String = p.chars().filter(|c| !c.is_whitespace()).collect();
+            // 词库 key 不带空格/分词符："ni hao" / "xi'an" → "nihao" / "xian"
+            let key: String = p.chars().filter(|c| c.is_ascii_alphabetic()).collect();
             match seen_key.get(&key) {
                 Some(&idx) => {
                     if p.split(' ').count() < uniq[idx].1.split(' ').count() {
@@ -672,11 +672,13 @@ impl ImeEngine {
             entries.push((key.clone(), p.clone(), e, pre));
         }
         if entries.is_empty() {
-            // 拼不出读音 → 只能给词，界面不显示读音条
+            // 拼不出读音 → 只能给词，界面不显示读音条。
+            // 分词符 `'` 不是 t9 表键的一部分，回退查库时先剥掉。
+            let bare: String = digits.chars().filter(|c| c.is_ascii_digit()).collect();
             return T9Result {
                 pinyins: Vec::new(),
                 words: self.db
-                    .query_t9(digits, 30)
+                    .query_t9(&bare, 30)
                     .unwrap_or_default()
                     .into_iter()
                     .collect(),

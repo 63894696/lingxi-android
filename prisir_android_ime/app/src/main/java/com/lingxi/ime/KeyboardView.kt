@@ -20,7 +20,7 @@ import androidx.core.content.ContextCompat
  * 键盘视图：候选栏 + 按键区，全自绘。
  *
  * 候选栏分区保持两行（拼音+工具 / 候选）；主键盘区 2026-11-20 按主流参考重排：
- *   · 26 键底行：`123 符 ， 中/英 空格 。 九 回车`；字母键右上角数字角标
+ *   · 26 键底行：`123 符 ， 中/英 空格 。 九 回车`
  *   · 九宫：3×3 + 右功能列 + 底行含 `0`；字母组大写 ABC/DEF
  *   · 数字页：拨号盘 3×4；键距/圆角对齐搜狗量测（hGap≈3dp、radius≈10dp）
  *   · 按压动画、命中区稳定 id、简繁/译工具键逻辑不变
@@ -184,11 +184,12 @@ class KeyboardView @JvmOverloads constructor(
     // 主键盘几何对齐搜狗量测：水平间隙约 0.45% 屏宽 ≈ 2–3dp，垂直约 4–6dp；
     // 圆角 10dp（字母键），功能键仍用胶囊半高。
     private val pad = d(5f)
-    private val hGap = d(3f)
-    private val vGap = d(6f)
-    private val radius = d(10f)
+    private val hGap = d(3.5f)
+    private val vGap = d(6.5f)
+    /** 玉石通润：圆角略加大。 */
+    private val radius = d(12f)
 
-    // ── 视觉 token ─────────────────────────────────────────────────────────
+    // ── 视觉 token（B 玉石通润）────────────────────────────────────────────
     private val bgPaint = Paint().apply { color = ContextCompat.getColor(context, R.color.kb_bg) }
     private val keyPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = ContextCompat.getColor(context, R.color.kb_key)
@@ -205,6 +206,14 @@ class KeyboardView @JvmOverloads constructor(
     private val shadowPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = ContextCompat.getColor(context, R.color.kb_shadow)
     }
+    private val shadowFarPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = ContextCompat.getColor(context, R.color.kb_shadow_far)
+    }
+    /** 键面顶部高光：仿玉石通润反光（裁切在键面内，避免白边）。 */
+    private val glossPaint = Paint(Paint.ANTI_ALIAS_FLAG)
+    private val glossTop = ContextCompat.getColor(context, R.color.kb_key_gloss_top)
+    private val glossBot = ContextCompat.getColor(context, R.color.kb_key_gloss_bot)
+    private val glossClipPath = android.graphics.Path()
     private val barPaint = Paint().apply { color = ContextCompat.getColor(context, R.color.cand_bg) }
     private val sepPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = ContextCompat.getColor(context, R.color.kb_sep)
@@ -268,22 +277,10 @@ class KeyboardView @JvmOverloads constructor(
         color = ContextCompat.getColor(context, R.color.kb_accent)
     }
     // 九宫格：数字小、字母组大（主流拇指键盘层级）
-    private val t9DigitPaint = Paint(textPaint).apply {
-        color = ContextCompat.getColor(context, R.color.kb_text_func)
-        textSize = d(13f)
-        typeface = Typeface.create("sans-serif", Typeface.NORMAL)
-    }
     private val t9LetterPaint = Paint(textPaint).apply {
         color = ContextCompat.getColor(context, R.color.kb_text)
         textSize = d(16f)
         typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
-    }
-    /** 26 键字母右上角数字角标（主流「键上角标」视觉）。 */
-    private val cornerHintPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = ContextCompat.getColor(context, R.color.kb_text_func)
-        textSize = d(10f)
-        textAlign = Paint.Align.RIGHT
-        typeface = Typeface.create("sans-serif", Typeface.NORMAL)
     }
     private val hintPaint = Paint(candPaint).apply {
         color = ContextCompat.getColor(context, R.color.kb_text_func)
@@ -669,18 +666,24 @@ class KeyboardView @JvmOverloads constructor(
     }
 
     private fun drawKeys(canvas: Canvas) {
-        // 第一遍：键面下方的柔和阴影（按下时随缩放一起收掉 → 有"沉下去"的立体感）
+        // 第一遍：双层阴影（远+近）→ 抬起高度感；按下时收掉
         for (hit in hits) {
             val key = hit.key ?: continue
             val s = pressScaleFor(hit)
-            val dy = d(3f) * (1f - s)
+            if (s < 0.97f) continue
             val r = hit.rect
             val rp = keyRadius(hit)
+            val lift = (s - 0.93f) / 0.07f // 1→满阴影，0.93→无
+            val far = d(5.5f) * lift
+            val near = d(2.2f) * lift
             canvas.drawRoundRect(
-                RectF(r.left, r.top + dy, r.right, r.bottom + dy), rp, rp, shadowPaint
+                RectF(r.left, r.top + far, r.right, r.bottom + far), rp, rp, shadowFarPaint
+            )
+            canvas.drawRoundRect(
+                RectF(r.left, r.top + near, r.right, r.bottom + near), rp, rp, shadowPaint
             )
         }
-        // 第二遍：键面 + 文字
+        // 第二遍：键面 + 裁切高光 + 文字
         for (hit in hits) {
             val key = hit.key ?: continue
             val s = pressScaleFor(hit)
@@ -690,13 +693,29 @@ class KeyboardView @JvmOverloads constructor(
             val paint = when {
                 down && key.type == KeyType.CHAR -> pressedPaint
                 down -> pressedFuncPaint
-                // ⇪ 锁定时淡蓝底（一眼看出大写状态）
                 key.type == KeyType.SHIFT && shift -> accentFillPaint
                 key.type != KeyType.CHAR -> funcPaint
                 else -> keyPaint
             }
             val rp = keyRadius(hit)
-            canvas.drawRoundRect(hit.rect, rp, rp, paint)
+            val r = hit.rect
+            canvas.drawRoundRect(r, rp, rp, paint)
+            // 高光裁进键面圆角内，避免胶囊键底边出现白边
+            if (!down) {
+                canvas.save()
+                glossClipPath.reset()
+                glossClipPath.addRoundRect(r, rp, rp, android.graphics.Path.Direction.CW)
+                canvas.clipPath(glossClipPath)
+                val hiBot = r.top + r.height() * 0.36f
+                glossPaint.shader = android.graphics.LinearGradient(
+                    r.left, r.top, r.left, hiBot,
+                    glossTop, glossBot,
+                    android.graphics.Shader.TileMode.CLAMP,
+                )
+                canvas.drawRect(r.left, r.top, r.right, hiBot, glossPaint)
+                glossPaint.shader = null
+                canvas.restore()
+            }
             drawKeyText(canvas, hit.rect, key)
             canvas.restore()
         }
@@ -722,29 +741,22 @@ class KeyboardView @JvmOverloads constructor(
             canvas.drawText(shown, rect.centerX(), cy, p)
             return
         }
-        // 九宫格：数字小在上，字母组大在下（ABC/DEF…）
+        // 九宫格：字母组 /「分词」居中（不再叠数字角标——数字不能上屏）
         if (page == Page.T9 && key.sub.isNotEmpty()) {
-            canvas.drawText(label, rect.centerX(), rect.centerY() - d(6f), t9DigitPaint)
-            canvas.drawText(key.sub, rect.centerX(), rect.centerY() + d(12f), t9LetterPaint)
+            val cy = rect.centerY() - (t9LetterPaint.descent() + t9LetterPaint.ascent()) / 2f
+            canvas.drawText(key.sub, rect.centerX(), cy, t9LetterPaint)
             return
         }
         if (page == Page.T9) {
-            // 「1」「0」等无字母组：大号数字居中
-            val cy = rect.centerY() - (t9LetterPaint.descent() + t9LetterPaint.ascent()) / 2f
-            canvas.drawText(label, rect.centerX(), cy, t9LetterPaint)
+            // 「分词」「0」等：功能灰字 / 数字居中
+            val p = if (key.code == "'" || label == "分词") funcTextPaint else t9LetterPaint
+            val cy = rect.centerY() - (p.descent() + p.ascent()) / 2f
+            canvas.drawText(label, rect.centerX(), cy, p)
             return
         }
-        // 26 键：主字母居中 + 右上角数字角标
+        // 26 键：主字母居中
         val cy = rect.centerY() - (textPaint.descent() + textPaint.ascent()) / 2f
         canvas.drawText(label, rect.centerX(), cy, textPaint)
-        if (key.sub.isNotEmpty()) {
-            canvas.drawText(
-                key.sub,
-                rect.right - d(5f),
-                rect.top + d(12f),
-                cornerHintPaint
-            )
-        }
     }
 
     // ── 命中区 ─────────────────────────────────────────────────────────────
