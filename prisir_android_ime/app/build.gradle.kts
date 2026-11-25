@@ -1,4 +1,4 @@
-﻿plugins {
+plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
 }
@@ -11,8 +11,8 @@ android {
         applicationId = "com.lingxi.ime"
         minSdk = 24
         targetSdk = 34
-        versionCode = 12
-        versionName = "2.0.0-alpha.12"
+        versionCode = 14
+        versionName = "2.0.0-alpha.14"
         ndk { abiFilters += listOf("arm64-v8a") }
     }
 

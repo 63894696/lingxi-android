@@ -32,6 +32,11 @@
             android:exported="false"
             android:label="@string/word_manager" />
 
+        <activity
+            android:name=".QuickAddActivity"
+            android:exported="false"
+            android:label="灵犀造词" />
+
         <!-- 极简设置页：只显示词库状态（不做任何"需要用户配置才能用"的开关） -->
         <activity
             android:name=".AboutActivity"

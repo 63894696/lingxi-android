@@ -150,7 +150,7 @@ object OpenApiServer {
                     .put("listening", isRunning())
                     .put("port", activePort)
                     .put("bind", "127.0.0.1")
-                    .put("version", "2.0.0-alpha.3")
+                    .put("version", "2.0.0-alpha.14")
                     .toString()
             method == "GET" && path == "/status" -> {
                 val ctx = appCtx
@@ -185,7 +185,7 @@ object OpenApiServer {
             val result: Any = when (method) {
                 "version" -> JSONObject()
                     .put("platform", "android")
-                    .put("version", "2.0.0-alpha.3")
+                    .put("version", "2.0.0-alpha.14")
                     .put("service", "prisir-ime-open-api")
                 "status" -> JSONObject()
                     .put("listening", isRunning())
@@ -195,6 +195,91 @@ object OpenApiServer {
                     val pinyin = params.optString("pinyin", "")
                     if (pinyin.isEmpty()) return err(id, -32602, "missing params.pinyin")
                     JSONObject().put("pinyin", pinyin).put("candidates", JSONArray(Engine.query(pinyin)))
+                }
+                "learn" -> {
+                    val py = params.optString("pinyin", params.optString("input", ""))
+                    val word = params.optString("word", params.optString("selected", ""))
+                    if (py.isEmpty() || word.isEmpty()) return err(id, -32602, "params.pinyin and params.word required")
+                    Engine.learn(py, word)
+                    JSONObject().put("pinyin", py).put("word", word).put("learned", true)
+                }
+                "user_add", "user_add_pos", "dict.add" -> {
+                    val word = params.optString("word", params.optString("text", "")).trim()
+                    if (word.isEmpty()) return err(id, -32602, "params.word required")
+                    val py = params.optString("pinyin", params.optString("code", "")).ifEmpty { null }
+                    val pos = params.optLong("pos", 1L)
+                    try {
+                        val code = Engine.addWordAuto(word, py, pos)
+                        JSONObject()
+                            .put("word", word)
+                            .put("pinyin", code)
+                            .put("pos", pos.coerceIn(1, 50))
+                            .put("added", true)
+                    } catch (t: IllegalArgumentException) {
+                        return err(id, -32602, t.message ?: "bad params")
+                    } catch (t: Throwable) {
+                        return err(id, -32000, t.message ?: "add failed")
+                    }
+                }
+                "user_add_batch", "dict.add_batch" -> {
+                    var items = params.optJSONArray("words")
+                        ?: params.optJSONArray("items")
+                        ?: params.optJSONArray("list")
+                    if (items == null) {
+                        val raw = params.optString("words", "")
+                        if (raw.isNotEmpty()) {
+                            items = JSONArray()
+                            raw.replace("、", "\n").replace("，", "\n").replace(",", "\n")
+                                .lineSequence().map { it.trim() }.filter { it.isNotEmpty() }
+                                .forEach { items!!.put(it) }
+                        }
+                    }
+                    if (items == null || items.length() == 0) return err(id, -32602, "params.words (list) required")
+                    if (items.length() > 500) return err(id, -32602, "batch too large (max 500)")
+                    val defaultPos = params.optLong("pos", 1L)
+                    val added = JSONArray()
+                    val failed = JSONArray()
+                    for (i in 0 until items.length()) {
+                        val it = items.opt(i)
+                        val word: String
+                        val py: String?
+                        val pos: Long
+                        when (it) {
+                            is String -> {
+                                word = it.trim(); py = null; pos = defaultPos
+                            }
+                            is JSONObject -> {
+                                word = it.optString("word", it.optString("text", "")).trim()
+                                py = it.optString("pinyin", it.optString("code", "")).ifEmpty { null }
+                                pos = if (it.has("pos")) it.optLong("pos") else defaultPos
+                            }
+                            else -> {
+                                failed.put(JSONObject().put("index", i).put("error", "item must be object or string"))
+                                continue
+                            }
+                        }
+                        if (word.isEmpty()) {
+                            failed.put(JSONObject().put("index", i).put("error", "empty word"))
+                            continue
+                        }
+                        try {
+                            val code = Engine.addWordAuto(word, py, pos)
+                            added.put(
+                                JSONObject().put("word", word).put("pinyin", code)
+                                    .put("pos", pos.coerceIn(1, 50))
+                            )
+                        } catch (t: Throwable) {
+                            failed.put(
+                                JSONObject().put("index", i).put("word", word)
+                                    .put("error", t.message ?: "failed")
+                            )
+                        }
+                    }
+                    JSONObject()
+                        .put("added", added)
+                        .put("failed", failed)
+                        .put("ok", added.length())
+                        .put("err", failed.length())
                 }
                 "open_api.get" -> {
                     val ctx = appCtx

@@ -63,7 +63,7 @@ object AboutCopy {
 
     const val OPENAPI_TITLE = "开放 API"
     const val OPENAPI_BODY = "" +
-        "开放 API 面向「用 AI 帮助用户定制个性化输入法」的场景：本机 Agent / 脚本可通过本地接口查询状态、调整配置、访问词库相关能力，从而按个人习惯协助设置输入法。\n" +
+        "开放 API 面向「用 AI 帮助用户定制个性化输入法」的场景：本机 Agent / 脚本可通过本地接口查询状态、调整配置、造词入库（user_add / user_add_batch），从而按个人习惯协助设置输入法。\n" +
         "\n" +
         "默认关闭。需要 Agent 接入时，请在设置页打开「开放 API」开关。\n" +
         "\n" +

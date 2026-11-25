@@ -35,6 +35,8 @@ object Engine {
     // ── 词库管理（与 Windows 词库窗同一套引擎能力）────────────────────────
     private external fun nativeUserList(handle: Long): String
     private external fun nativeUserAdd(handle: Long, pinyin: String, word: String): Boolean
+    private external fun nativeUserAddPos(handle: Long, pinyin: String, word: String, pos: Long): Boolean
+    private external fun nativeAutoCode(handle: Long, word: String): String?
     private external fun nativeUserRemove(handle: Long, pinyin: String, word: String): Int
     private external fun nativeDictSearchPage(handle: Long, term: String, limit: Int, offset: Int): String
     private external fun nativeDictCount(handle: Long, term: String): Long
@@ -195,6 +197,32 @@ object Engine {
         handle != 0L && nativeNameRemove(handle, black, word) > 0
     fun userAdd(pinyin: String, word: String): Boolean =
         handle != 0L && nativeUserAdd(handle, pinyin, word)
+    /** 手工造词（指定候选位）；引擎写全拼主行+简拼别名。 */
+    fun userAddPos(pinyin: String, word: String, pos: Long = 1): Boolean =
+        handle != 0L && synchronized(lock) {
+            nativeUserAddPos(handle, pinyin, word, pos.coerceIn(1, 50))
+        }
+    /** 中文 → 简拼（造词窗显示）；失败 null。 */
+    fun autoCode(word: String): String? =
+        if (handle == 0L || word.isEmpty()) null else synchronized(lock) { nativeAutoCode(handle, word) }
+    /**
+     * 对齐 Win/Linux add_word_auto：编码优先调用方，其次全拼，再简拼。
+     * @return 实际写入的编码；失败抛 IllegalArgumentException / IllegalStateException。
+     */
+    fun addWordAuto(word: String, pinyin: String? = null, pos: Long = 1): String {
+        val w = word.trim()
+        require(w.isNotEmpty()) { "词条为空" }
+        require(w.length <= 30) { "词条太长(>30 字),像是一段话而不是词条" }
+        val given = pinyin?.filter { it.isLetter() }?.lowercase().orEmpty()
+        val code = when {
+            given.isNotEmpty() -> given
+            else -> (pinyinFor(w) ?: autoCode(w)
+                ?: if (w.all { it.code < 128 }) w.lowercase() else null).orEmpty()
+        }
+        require(code.isNotEmpty()) { "算不出「$w」的编码,请传 pinyin" }
+        check(userAddPos(code, w, pos)) { "写入词库失败(引擎未加载或词库不可写)" }
+        return code
+    }
     fun userRemove(pinyin: String, word: String): Boolean =
         handle != 0L && nativeUserRemove(handle, pinyin, word) > 0
     fun mainUpsert(pinyin: String, word: String, weight: Long): Boolean =

@@ -419,6 +419,11 @@ class AboutActivity : Activity() {
                 startActivity(Intent(this@AboutActivity, WordActivity::class.java))
             }
         }
+        val quickAddBtn = pillButton("灵犀造词").apply {
+            setOnClickListener {
+                startActivity(Intent(this@AboutActivity, QuickAddActivity::class.java))
+            }
+        }
         // 快速按键自检（抓"快速打字丢键"这类回归）
         // adb input tap 每次 ~460ms，复现不出"间隔 < 抬起动画时长"的丢键场景，
         // 所以这里用真实 MotionEvent 按 90ms 间隔连发 12 次，看收进去几个。
@@ -450,6 +455,7 @@ class AboutActivity : Activity() {
             orientation = LinearLayout.VERTICAL
             addView(sectionTitle("诊断与维护"))
             addView(wordBtn)
+            addView(quickAddBtn)
             addView(selfTestBtn)
         }
         root.addView(card(diagColumn))

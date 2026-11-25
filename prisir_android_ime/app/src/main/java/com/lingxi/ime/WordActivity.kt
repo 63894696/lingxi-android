@@ -145,14 +145,17 @@ class WordActivity : Activity() {
         reload()
     }
 
-    /** 加入词库：只需要输入中文，拼音由引擎逐字反推（`nativePinyinFor`）。 */
+    /** 加入词库：走灵犀造词入口（全拼主行+简拼别名+候选位1）。 */
     private fun addWord() {
         val row = current()
         val word = row?.value ?: search.text.toString().trim()
         if (word.isEmpty()) return toast("先输入一个中文词")
-        val pinyin = Engine.pinyinFor(word) ?: return toast("拼音算不出来（含非汉字？）")
-        val ok = Engine.userAdd(pinyin, word)
-        toast(if (ok) "已加入「$word」($pinyin)" else "加入失败")
+        try {
+            val code = Engine.addWordAuto(word, pos = 1)
+            toast("已加入「$word」($code)")
+        } catch (t: Throwable) {
+            toast(t.message ?: "加入失败")
+        }
         reload()
     }
 

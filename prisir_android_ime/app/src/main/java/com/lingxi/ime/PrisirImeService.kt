@@ -53,6 +53,17 @@ class PrisirImeService : InputMethodService(), KeyboardView.Listener {
      */
     private var pinyinMode: String = LayoutPref.PY26
 
+    /**
+     * 当前输入框是不是密码框（密码框强制英文直出，且**不记忆**为英文布局）。
+     *
+     * 2026-11-25 新增：`english` 以前是三个来源各自赋值（布局 =EN26 / 密码框 / 布局切换键），
+     * 谁都可能把它留在旧值。典型故障 —— `onFinishInput` 把 english 清成 false，而
+     * `LayoutPref` 仍是 "en"：英文键盘还在显示，字母却被当拼音累积（用户报的
+     * "切到 26 键英文打字还出拼音候选，切中文再切回来才好"）。现在 english 一律由
+     * `passwordField || layout==EN26` 现算，见 syncLayout()。
+     */
+    private var passwordField = false
+
     // ── 候选查询（后台线程 + 缓存）────────────────────────────────────────
     //
     // 2026-11-19 用户反馈"26 键输入反应有点慢"：根因是**每次按键都在主线程同步查库**
@@ -295,10 +306,21 @@ class PrisirImeService : InputMethodService(), KeyboardView.Listener {
      */
     private fun syncLayout() {
         val want = LayoutPref.mode(this)
+        var changed = false
         if (want != mode) {
             mode = want
             if (mode != LayoutPref.EN26) pinyinMode = mode
-            english = mode == LayoutPref.EN26
+            changed = true
+        }
+        // 中文/英文解释**每次都按布局现算**，不能只在「布局变了」的分支里赋值：
+        // onFinishInput 会把 english 清 false，而 LayoutPref 仍是 "en" →
+        // 英文键盘 + 拼音候选（2026-11-25 用户报的 bug）。密码框除外。
+        val wantEn = passwordField || mode == LayoutPref.EN26
+        if (english != wantEn) {
+            english = wantEn
+            changed = true
+        }
+        if (changed) {
             refreshInputView()
             return
         }
@@ -329,7 +351,7 @@ class PrisirImeService : InputMethodService(), KeyboardView.Listener {
     private fun buildInputView(): View {
         mode = LayoutPref.mode(this)
         if (mode != LayoutPref.EN26) pinyinMode = mode
-        english = mode == LayoutPref.EN26
+        english = passwordField || mode == LayoutPref.EN26
         val v = KeyboardView(this)
         v.listener = this
         v.page = homePage()
@@ -351,20 +373,26 @@ class PrisirImeService : InputMethodService(), KeyboardView.Listener {
         super.onStartInput(editorInfo, restarting)
         // 密码框不显示候选（也不学习），避免把密码记进词库
         val type = editorInfo?.inputType ?: 0
-        val password = (type and InputType.TYPE_TEXT_VARIATION_PASSWORD) != 0 ||
+        passwordField = (type and InputType.TYPE_TEXT_VARIATION_PASSWORD) != 0 ||
             (type and InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD) != 0 ||
             (type and InputType.TYPE_TEXT_VARIATION_WEB_PASSWORD) != 0
-        if (password) {
-            english = true
-            composing = ""
-            refresh()
-        }
+        // 换输入框 = 新的一轮状态：布局/中英一律按偏好重算，别沿用上一个框的残留。
+        mode = LayoutPref.mode(this)
+        if (mode != LayoutPref.EN26) pinyinMode = mode
+        english = passwordField || mode == LayoutPref.EN26
+        composing = ""
+        resetShift()
+        refresh()
     }
 
     override fun onFinishInput() {
         super.onFinishInput()
         composing = ""
-        english = false
+        passwordField = false
+        // 只清「本次输入会话」的状态，不能把布局偏好一起抹掉：
+        // english 由布局现算，否则会出现「英文键盘但按拼音处理」（2026-11-25 修）。
+        mode = LayoutPref.mode(this)
+        english = mode == LayoutPref.EN26
         resetShift()
         refresh()
     }
@@ -486,7 +514,7 @@ class PrisirImeService : InputMethodService(), KeyboardView.Listener {
                 if (mode != LayoutPref.EN26) pinyinMode = mode
                 LayoutPref.setMode(this@PrisirImeService, target)
                 mode = target
-                english = target == LayoutPref.EN26
+                english = passwordField || target == LayoutPref.EN26
                 resetShift()
                 refreshInputView()
                 notifyLayoutChanged()
